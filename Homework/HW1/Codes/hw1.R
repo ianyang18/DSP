@@ -78,17 +78,27 @@ targetFile <- function(df,query,type) {
 	index
 }
 
+# function: get the basename of file
+# input: file's data path
+# output: file's name
+grepFileName <- function(file_path) {
+    pattern <- '^.+\\/(.+)\\..+$'
+    fbName <- gsub(pattern,'\\1',file_path)
+    fbName
+}
+
 # record the weight/height min/max indices over all files
 index <- list('weight'=targetFile(df,query,'weight'),'height'=targetFile(df,query,'height'))
 # transpose the data.frame, exchange the row and column.
 df <- as.data.frame(t(round(df,digits=2)))
 # adding the column which indicates the min/max file in each weight/height categories
-df[,query] <- c(basename(files[[index[['weight']]]]),basename(files[[index[['height']]]]))
+df[,query] <- c(grepFileName(files[[index[['weight']]]]),grepFileName(files[[index[['height']]]]))
+
 
 # labelling the name with each row
 df <- cbind(Type=rownames(df),df)
 # unlist the list type(file) to get the file's basename
-files <- basename(unlist(files))
+files <- grepFileName(unlist(files))
 colnames(df) <- c('Type',files,query)
 
 # write the result into the output file
