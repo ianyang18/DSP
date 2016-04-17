@@ -4,7 +4,7 @@ args <- commandArgs(trailingOnly=TRUE)
 i <- 1
 arg <- ""
 target <- ""
-query <- ""
+queries <- list()
 files <- list()
 out <- ""
 while (i <= length(args)) {
@@ -16,6 +16,7 @@ while (i <= length(args)) {
         target <- tolower(args[i])
     } else if (arg == 'query') {
 		query <- tolower(args[i])
+        queries[[query]] <- query
 	} else if (arg == 'files') {
 		file <- args[i]
 		files[[file]] <- file
@@ -26,6 +27,11 @@ while (i <= length(args)) {
 	}
 	i <- i+1
 }
+
+
+# Creating the confusion matrix
+# Input: data.frame table and the target of male/female
+# Output: confusion matrix
 
 CM<-function(table,target) {
     if (target=="female") {
@@ -47,41 +53,133 @@ CM<-function(table,target) {
     CM <- list("TP"=TP,"TN"=TN,"FP"=FP,"FN"=FN)
 }
 
-F1<-function(tb,target) {
-    cm <- CM(tb,target)
+# Calculating the F1 score
+# Input: confusion matrix
+# Output: F1 score
+
+F1<-function(cm) {
     P = cm$TP/(cm$TP+cm$FP)
     R = cm$TP/(cm$TP+cm$FN)
-    f1 <- (2*P*R/(P+R))
+    f1 <- round((2*P*R/(P+R)),digits=2)
 }
 
-SS <- function(tb,target){
-    cm <- CM(tb,target)
-    ss <- cm$TP/(cm$TP+cm$FN)
+# Calculating the sensitivity value
+# Input: confusion matrix
+# Output: sensitivity value
+
+SS <- function(cm){
+    ss <- round(cm$TP/(cm$TP+cm$FN),digits=2)
 }
 
-SC <- function(tb,target) {
-    cm <- CM(tb,target)
-    sc <- cm$TN/(cm$TN+cm$FP)
+# Calculating the specificity value
+# Input: confusion matrix
+# Output: specificity value
+
+SC <- function(cm) {
+    sc <- round(cm$TN/(cm$TN+cm$FP),digits=2)
 }
 
-names<-c()
-f1<-c()
-ss<-c()
-sc<-c()
+AUC <- function(eval) {
+    auc <- attributes(performance(eval,'auc'))$y.values[[1]]
+    auc <- round(auc,digits=2)
+}
+
+# Calculating the p-value
+# Input: 2 by 2 table
+# Output: p-value
+
+significance <- function(table) {
+    #st <- fisher.test(table,alternative='g')$p.value
+    st <- fisher.test(table)$p.value
+}
+
+for (q in queries) {
+    if(q=="f1")
+        queries[[q]]=F1
+    else if(q=="auc")
+        queries[[q]]=AUC
+    else if (q=="sensitivity")
+        queries[[q]]=SS
+    else if (q=="specificity")
+        queries[[q]]=SC
+}
+
+names <- c()
+f1 <- c()
+ss <- c()
+sc <- c()
+auc <- c()
+sft <- c()
+
 for (set in files) {
+    count <- 1
     for (file in list.files(set)) {
         name<-gsub(".csv","",basename(file))
+        sname<-gsub("../data/","",set)
+        name<-paste(sname,name,sep="-")
+        names<-c(names,name)
         d<-read.csv(paste(set,file,sep="/"),header=T,sep=",",stringsAsFactors=FALSE)
         resultframe <- data.frame(target=d$reference,pred=d$prediction,score=d$pred.score)
         t <- table(resultframe$target, resultframe$pred)
-        #print(as.vector(resultframe$score))
+        cm <- CM(t,target)
         eval <- prediction(resultframe$score,resultframe$target)
-        plot(performance(eval,'tpr','fpr'))
-        f1 <- c(f1,F1(t,target))
-        ss <- c(ss,SS(resultframe,target))
-        sc <- c(sc,SC(resultframe,target))
-        break
+        if (count == 1) {
+            plot(performance(eval,'tpr','fpr'),main="ROC Curve")
+        }
+        else {
+            plot(performance(eval,'tpr','fpr'),add=TRUE)
+        }
+        count <- count + 1
+        for (q in names(queries)) {
+            if (q=="f1") {
+                f1 <- c(f1,queries[[q]](cm))
+            }
+            else if (q=="sensitivity") {
+                ss <- c(ss,queries[[q]](cm))
+            }
+            else if (q=="specificity") {
+                sc <- c(sc, queries[[q]](cm))
+            }
+            else if (q=="auc") {
+                auc <- c(auc, queries[[q]](eval))
+            }
+        }
+
+        #auc <- c(auc,round(attributes(performance(eval,'auc'))$y.values[[1]],digits=2))
+        #f1 <- c(f1,F1(cm))
+        #ss <- c(ss,SS(cm))
+        #sc <- c(sc,SC(cm))
+        #sf <- significance(t)
+        #if (sf > auc[1]) {
+        #    sft <- c(sft,"T")
+        #}
+        #else {
+        #    sft <- c(sft,"F")
+        #}
+        #break
     }
 }
-outData<-data.frame()
+outData <- data.frame(set=names,stringsAsFactors=F)
+for (q in names(queries)) {
+    if (q=="f1") {
+        outData["F1"]=f1
+    }
+    else if (q=="auc") {
+        outData["AUC"]=auc
+    }
+    else if (q=="sensitivity") {
+        outData["sensitivity"]=ss
+    }
+    else if (q=="specificity") {
+        outData["specificity"]=sc
+    }
+}
+print(outData)
+#outData<-data.frame(set=names,F1=f1,AUC=auc,sensitivity=ss,specificity=sc,stringsAsFactors=F)
+#outData<-data.frame(set=names,F1=f1,AUC=auc,sensitivity=ss,specificity=sc,significance=sft,stringsAsFactors=F)
+#print(outData[,c("set","F1","AUC","sensitivity","specificity","significance")])
+#index <- sapply(outData[,c("F1","AUC","sensitivity","specificity")],function(x) which.max(x))
+
+#outData <- rbind(outData,c("highest",names[index],"nan"))
+#write.table(outData,file=out,sep=',',row.names=F,quote=F)
 
