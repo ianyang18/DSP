@@ -1,0 +1,12 @@
+set,sensitivity,F1,specificity,AUC,significance
+method1,0.45,0.5,0.6,0.52,no
+method10,0.64,0.64,0.6,0.63,no
+method2,0.36,0.4,0.5,0.38,no
+method3,0.36,0.38,0.4,0.36,no
+method4,0.55,0.52,0.4,0.54,no
+method5,0.18,0.21,0.4,0.3,no
+method6,0.55,0.55,0.5,0.52,no
+method7,0.36,0.4,0.5,0.55,no
+method8,0.73,0.67,0.5,0.66,no
+method9,0.36,0.42,0.6,0.65,no
+highest,method8,method8,method1,method8,nan
