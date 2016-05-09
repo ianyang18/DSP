@@ -21,7 +21,6 @@ shinyUI(fluidPage(
             h4("View Data"),
             #textOutput("text"),
             ggvisOutput("plot")
-            #plotOutput("plot", height=300),
         ),
         column(4,
             h4("Summary Data"),
