@@ -99,7 +99,6 @@ shinyServer(function(input, output, session) {
     random.t <- table(gt_sample, resultFrame$predict)
     random.a <- accuracy(random.t, levels(factor(train.data[, 86])))
     
-    d <- data.frame("Random" = random.a, "KNN" = a)
     paste("The accuracy of the test data is: ", a)
   })
   
