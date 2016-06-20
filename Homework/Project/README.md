@@ -5,7 +5,7 @@ Here we use the knn model to train the data and predict its test data.
 
 Prerequisite:
 
--  require "shiny", "ggvis", "class" library
+-  require "class" library
 
 #Usage
 
